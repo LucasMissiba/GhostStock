@@ -143,6 +143,26 @@ def create_app() -> Flask:
             if os.getenv("ENABLE_DB_CREATE_ALL", "true").lower() == "true":
                 db.create_all()
 
+        try:
+            if os.getenv("AUTO_CREATE_ADMIN", "false").lower() == "true":
+                admin_email = os.getenv("DEFAULT_ADMIN_EMAIL", "admin@ghoststock.local")
+                admin_password = os.getenv("DEFAULT_ADMIN_PASSWORD", "Admin123!")
+                admin_name = os.getenv("DEFAULT_ADMIN_NAME", "Administrador")
+                from .models import User as _User
+                existing = _User.query.filter_by(email=admin_email).first()
+                if existing is None:
+                    admin = _User(email=admin_email, name=admin_name, role="admin")
+                    admin.set_password(admin_password)
+                    db.session.add(admin)
+                    db.session.commit()
+                else:
+                    # Ajusta a senha caso AUTO_UPDATE_ADMIN_PASSWORD esteja ativo
+                    if os.getenv("AUTO_UPDATE_ADMIN_PASSWORD", "true").lower() == "true":
+                        existing.set_password(admin_password)
+                        db.session.commit()
+        except Exception as _e:
+            app.logger.warning(f"AUTO_CREATE_ADMIN falhou: {_e}")
+
                                                                                              
     if os.getenv("ENABLE_SCHEDULER", "false").lower() == "true":
         from .scheduler import schedule_jobs
@@ -269,6 +289,22 @@ def create_app() -> Flask:
         with open(out_path, "w", encoding="utf-8") as f:
             _json.dump(patterns, f, ensure_ascii=False, indent=2)
         click.echo(f"OK - intents salvos em {out_path} com {sum(len(b['patterns']) for b in patterns)} padrões")
+    @app.cli.command("create_admin")
+    @click.option("--email", required=True)
+    @click.option("--password", required=True)
+    @click.option("--name", default="Administrador")
+    def create_admin(email: str, password: str, name: str):
+        from .models import User
+        from . import db as _db
+        user = User.query.filter_by(email=email).first()
+        if user:
+            click.echo("Já existe um usuário com esse e-mail.")
+            return
+        user = User(email=email, name=name, role="admin")
+        user.set_password(password)
+        _db.session.add(user)
+        _db.session.commit()
+        click.echo("OK - admin criado")
     @app.cli.command("seed_hospital")
     def seed_hospital():
         from .models import User, Item

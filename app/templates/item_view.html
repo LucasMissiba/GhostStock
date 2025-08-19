@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block content %}
+<article class="item-view">
+  <header>
+    <h2>{{ item.name }}</h2>
+    <div class="muted">#{{ item.id }}</div>
+    <span class="badge badge-tipo {{ item.item_type }}">{{ item.item_type.replace('_',' ').title() }}</span>
+  </header>
+  <section class="item-meta">
+    <div><strong>Status:</strong> {{ item.status }}</div>
+    <div><strong>Estoque de origem:</strong> {{ item.origin_stock or '-' }}</div>
+    <div><strong>Local:</strong> {{ item.location or '-' }}</div>
+    <div><strong>Paciente:</strong> {{ item.patient_name or '-' }}</div>
+    <div><strong>Movimentação:</strong> {{ item.movement_date.strftime('%Y-%m-%d') if item.movement_date else '-' }}</div>
+    <div><strong>Quantidade:</strong> {{ item.quantity }} (min {{ item.min_threshold }})</div>
+    <div><strong>Entrada:</strong> {{ item.entry_date.strftime('%Y-%m-%d') }}</div>
+    {% if item.is_cama %}
+      <div><strong>Última manutenção:</strong> {{ item.last_maintenance_date.strftime('%Y-%m-%d') if item.last_maintenance_date else '-' }}</div>
+      {% if item.last_maintenance_date %}
+        {% if item.maintenance_overdue_days > 0 %}
+          <div><strong>Situação manutenção:</strong> Vencida há {{ item.maintenance_overdue_days }} dia(s)</div>
+        {% else %}
+          <div><strong>Situação manutenção:</strong> Vence em {{ item.days_until_maintenance_due }} dia(s)</div>
+        {% endif %}
+      {% endif %}
+    {% endif %}
+    {% if item.lat and item.lng %}
+      <div class="trace">
+        <button class="btn-primary" id="open-trace" 
+          data-lat="{{ '%.6f'|format(item.lat) }}" 
+          data-lng="{{ '%.6f'|format(item.lng) }}" 
+          data-stock="{{ item.origin_stock }}" 
+          data-patient="{{ item.patient_name or '' }}" 
+          data-location="{{ item.location or '' }}">
+          Rastreabilidade
+        </button>
+      </div>
+    {% endif %}
+  </section>
+  {% if item.photo_path %}
+    <img class="item-photo" src="/{{ item.photo_path }}" alt="Foto do item" />
+  {% endif %}
+  <section style="margin-top:16px; border-top:1px solid #111; padding-top:12px;">
+    <h3>RASTREABILIDADE</h3>
+    {% if item.lat and item.lng %}
+      <p>Localização atual: {{ '%.6f'|format(item.lat) }}, {{ '%.6f'|format(item.lng) }}</p>
+      <p><a class="btn-link" target="_blank" rel="noopener" href="https://www.google.com/maps?q={{ '%.6f'|format(item.lat) }},{{ '%.6f'|format(item.lng) }}">Rastrear localização</a></p>
+      <div id="map"
+           data-lat="{{ '%.6f'|format(item.lat) }}"
+           data-lng="{{ '%.6f'|format(item.lng) }}"
+           data-name="{{ item.name|e }}"
+           data-type="{{ item.item_type }}"
+           style="height:280px;border:1px solid #111;border-radius:12px;margin-top:8px"></div>
+    {% else %}
+      <p class="muted">Item não locado.</p>
+    {% endif %}
+  </section>
+
+  <section style="margin-top:16px; border-top:1px solid #111; padding-top:12px;">
+    <h3>Timeline</h3>
+    <div id="timeline" class="trace-info"></div>
+  </section>
+
+  <footer class="item-actions">
+    <a class="btn-secondary" href="{{ url_for('items.edit_item', item_id=item.id) }}">Editar</a>
+    {% if current_user.is_authenticated and current_user.role == 'admin' %}
+      <a class="btn-secondary" href="{{ url_for('qrcode.generate_qr', item_id=item.id) }}">QR PNG</a>
+      <a class="btn-secondary" href="{{ url_for('qrcode.qr_pdf', item_id=item.id) }}">QR PDF</a>
+    {% endif %}
+  </footer>
+</article>
+
+<div id="trace-modal" class="modal hidden">
+  <div class="modal-content">
+    <h3>Rastreabilidade</h3>
+    <div id="trace-info" class="trace-info"></div>
+    <div class="modal-actions">
+      <a id="trace-link" class="btn-primary" target="_blank" rel="noopener">Abrir no Google Maps</a>
+      <button class="btn-secondary" id="trace-close">Fechar</button>
+    </div>
+  </div>
+  <div class="modal-backdrop" id="trace-backdrop"></div>
+
+{% if item.lat and item.lng %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% endif %}
+
+
+{% endblock %}
+
+

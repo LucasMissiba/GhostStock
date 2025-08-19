@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+<section>
+  <h2>Configurações</h2>
+  <form method="POST" class="form-grid" style="margin-top:8px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <label>Tema
+      <select name="theme">
+        <option value="dark" {% if current_user.theme=='dark' %}selected{% endif %}>Escuro</option>
+        <option value="light" {% if current_user.theme=='light' %}selected{% endif %}>Claro</option>
+      </select>
+    </label>
+    <div class="form-actions">
+      <button class="btn-primary" type="submit">Salvar</button>
+    </div>
+  </form>
+  
+
+  <section style="margin-top:16px">
+    <h3>Integrações</h3>
+    <ul>
+      <li>Twilio: {% if config.get('TWILIO_ACCOUNT_SID') %}Configurado{% else %}Não configurado{% endif %}</li>
+      <li>Sentry: {% if config.get('SENTRY_DSN') %}Ativo{% else %}Desligado{% endif %}</li>
+      <li>Webhooks: em breve</li>
+    </ul>
+  </section>
+</section>
+{% endblock %}
+
+

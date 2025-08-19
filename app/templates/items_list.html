@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="list-header">
+  <h2 class="page-title">Itens</h2>
+  <a class="btn-primary" href="{{ url_for('items.create_item') }}">Novo item</a>
+</div>
+
+<form method="GET" class="filters" onsubmit="return true;">
+  <div>
+    <select id="search-q" name="q" style="min-width:260px">
+      <option value="">Filtrar por item...</option>
+      {% for it in items %}
+        {% set val = it.name %}
+        <option value="{{ val }}" {% if request.args.get('q') == val %}selected{% endif %}>{{ it.name }} ({{ it.id }})</option>
+      {% endfor %}
+    </select>
+    <div id="autocomplete" class="autocomplete"></div>
+  </div>
+  <label>Data inicial
+    <input type="date" name="entry_from" value="{{ request.args.get('entry_from','') }}" />
+  </label>
+  <label>Data final
+    <input type="date" name="entry_to" value="{{ request.args.get('entry_to','') }}" />
+  </label>
+  
+  <select name="origin_stock">
+    {% set os = request.args.get('origin_stock','') %}
+    <option value="">Estoque</option>
+    <option value="AL" {% if os=='AL' %}selected{% endif %}>AL - Rio de Janeiro</option>
+    <option value="AS" {% if os=='AS' %}selected{% endif %}>AS - São Paulo</option>
+    <option value="AV" {% if os=='AV' %}selected{% endif %}>AV - Valinhos</option>
+    <option value="AB" {% if os=='AB' %}selected{% endif %}>AB - Belo Horizonte</option>
+  </select>
+  <select name="item_type">
+    {% set it = request.args.get('item_type','') %}
+    <option value="">Tipo</option>
+    <option value="cama" {% if it=='cama' %}selected{% endif %}>Cama</option>
+    <option value="cadeira_higienica" {% if it=='cadeira_higienica' %}selected{% endif %}>Cadeira higiênica</option>
+    <option value="cadeira_rodas" {% if it=='cadeira_rodas' %}selected{% endif %}>Cadeira de rodas</option>
+    <option value="muletas" {% if it=='muletas' %}selected{% endif %}>Muletas</option>
+    <option value="andador" {% if it=='andador' %}selected{% endif %}>Andador</option>
+    <option value="colchao_pneumatico" {% if it=='colchao_pneumatico' %}selected{% endif %}>Colchão pneumático (CPNEU)</option>
+  </select>
+  <select name="status">
+    <option value="">Status</option>
+    <option value="disponivel" {% if request.args.get('status')=='disponivel' %}selected{% endif %}>Disponível</option>
+    <option value="locado" {% if request.args.get('status')=='locado' %}selected{% endif %}>Locado</option>
+    <option value="em_manutencao" {% if request.args.get('status')=='em_manutencao' %}selected{% endif %}>Em manutenção</option>
+    <option value="aguardando_manutencao" {% if request.args.get('status')=='aguardando_manutencao' %}selected{% endif %}>Aguardando manutenção</option>
+  </select>
+  
+  <button type="submit" class="btn-secondary">Filtrar</button>
+  <a class="btn-link" href="{{ url_for('items.list_items') }}">Limpar</a>
+  <input id="img-search-input" type="file" accept="image/*" style="display:none" />
+  <button class="btn-secondary" type="button" id="img-search-btn">Buscar por imagem</button>
+</form>
+
+  <div class="table-responsive">
+  <table class="items-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Código</th>
+        <th>Tipo</th>
+        <th>Status</th>
+        <th>Local</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for it in items %}
+      <tr>
+        <td>{{ it.id }}</td>
+        <td><a href="{{ url_for('items.view_item', item_id=it.id) }}">{{ it.name }}</a></td>
+        <td>
+          <span class="badge badge-tipo {{ it.item_type }}">{{ it.item_type.replace('_',' ').title() }}</span>
+        </td>
+        <td>
+          {% set s = it.status %}
+          <span class="badge {{ s }}">{{ s.replace('_',' ').upper() }}</span>
+          {% if it.maintenance_due %}
+            <span class="badge em_manutencao">EM MANUTENÇÃO</span>
+          {% elif it.maintenance_soon %}
+            <span class="badge aguardando">AGUARDANDO MANUTENÇÃO</span>
+          {% endif %}
+        </td>
+        
+        <td>{{ it.location or '-' }}</td>
+        <td class="actions">
+          <a class="btn-link" href="{{ url_for('items.edit_item', item_id=it.id) }}">Editar</a>
+          {% if it.status == 'locado' and it.lat and it.lng %}
+            <a class="btn-link" target="_blank" rel="noopener" href="https://www.google.com/maps?q={{ '%.6f'|format(it.lat) }},{{ '%.6f'|format(it.lng) }}">Rastreabilidade</a>
+          {% endif %}
+          {% if current_user.role == 'admin' %}
+            <a class="btn-link" href="{{ url_for('qrcode.generate_qr', item_id=it.id) }}">QR PNG</a>
+            <a class="btn-link" href="{{ url_for('qrcode.qr_pdf', item_id=it.id) }}">QR PDF</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Nenhum item encontrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  {% if pagination and pagination.pages > 1 %}
+  <div class="pagination" style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap">
+    {% if pagination.has_prev %}
+      <a class="btn-secondary" href="{{ url_for('items.list_items', **(request.args.to_dict(flat=True) | combine({'page': pagination.prev_num})) ) }}">Anterior</a>
+    {% endif %}
+    <span class="muted">Página {{ pagination.page }} de {{ pagination.pages }}</span>
+    {% if pagination.has_next %}
+      <a class="btn-secondary" href="{{ url_for('items.list_items', **(request.args.to_dict(flat=True) | combine({'page': pagination.next_num})) ) }}">Próxima</a>
+    {% endif %}
+  </div>
+
+<div id="img-modal" class="modal hidden">
+  <div class="modal-content">
+    <h3>Busca por imagem</h3>
+    <div id="img-results" class="trace-info"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="img-close">Fechar</button>
+    </div>
+  </div>
+  <div class="modal-backdrop" id="img-backdrop"></div>
+</div>
+  {% endif %}
+{% endblock %}
+
+<div id="trace-modal" class="modal hidden">
+  <div class="modal-content">
+    <h3>Rastreabilidade</h3>
+    <div id="trace-info" class="trace-info"></div>
+    <div class="modal-actions">
+      <a id="trace-link" class="btn-primary" target="_blank" rel="noopener">Abrir no Google Maps</a>
+      <button class="btn-secondary" id="trace-close">Fechar</button>
+    </div>
+  </div>
+  <div class="modal-backdrop" id="trace-backdrop-list"></div>
+  </div>
+
+
+
+

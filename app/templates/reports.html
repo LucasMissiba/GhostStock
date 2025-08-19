@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<section>
+  <h2>Relatórios</h2>
+  <div class="form-actions" style="margin-top:8px">
+    <a class="btn-primary" href="{{ url_for('reports.reports_pdf_summary') }}">Baixar PDF (Resumo)</a>
+    <a class="btn-secondary" href="{{ url_for('dashboard.export_excel') }}">Exportar Excel</a>
+  </div>
+  <p class="muted">Inclui estoque, uso (locados), comparação mensal (MoM) e itens críticos nos relatórios.
+  O PDF é básico para começar; posso enriquecer com gráficos.</p>
+</section>
+{% endblock %}
+
+

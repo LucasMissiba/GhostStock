@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2 class="page-title">Catálogo técnico</h2>
+
+<p class="muted">Dimensões, peso e especificações por tipo de item. Passe o mouse sobre os cartões para interagir.</p>
+
+<section class="catalog-grid">
+  {% set items = [
+    {
+      'type':'cama',
+      'title':'Cama Hospitalar',
+      'img':'img/cama_real.jpg',
+      'fallback':'img/cama.svg',
+      'specs': {
+        'Dimensões': '200 x 90 x 60–80 cm (C x L x A, regulável)',
+        'Peso': 'aprox. 75 kg',
+        'Estrutura': 'Aço carbono com pintura epóxi',
+        'Capacidade': 'até 180 kg',
+        'Rodízios': '4 com travas',
+        'Cabeceira/Peseira': 'Removíveis',
+        'Grades laterais': 'Retráteis',
+      }
+    },
+    {
+      'type':'cadeira_rodas',
+      'title':'Cadeira de Rodas',
+      'img':'img/cadeira_rodas.svg',
+      'fallback':'img/cadeira_rodas.svg',
+      'specs': {
+        'Dimensões': 'Assento 40–46 cm, altura 90–100 cm',
+        'Peso': 'aprox. 14 kg',
+        'Estrutura': 'Alumínio aeronáutico',
+        'Pneus': 'Traseiros 24", dianteiros 6"',
+        'Capacidade': 'até 120 kg',
+        'Apoios': 'Braços e pernas removíveis',
+      }
+    },
+    {
+      'type':'cadeira_higienica',
+      'title':'Cadeira Higiênica',
+      'img':'img/cadeira_higienica.svg',
+      'fallback':'img/cadeira_higienica.svg',
+      'specs': {
+        'Dimensões': '50 x 55 x 95 cm (C x L x A)',
+        'Peso': 'aprox. 9 kg',
+        'Estrutura': 'Aço inox',
+        'Assento': 'Polipropileno c/ tampa',
+        'Coletor': 'Bacia removível',
+        'Capacidade': 'até 110 kg',
+      }
+    },
+    {
+      'type':'muletas',
+      'title':'Muletas Axilares',
+      'img':'img/muletas.svg',
+      'fallback':'img/muletas.svg',
+      'specs': {
+        'Altura': 'Ajustável 135–155 cm',
+        'Peso': 'aprox. 1,2 kg (cada)',
+        'Material': 'Alumínio anodizado',
+        'Ponteiras': 'Borracha anti-derrapante',
+        'Capacidade': 'até 120 kg',
+      }
+    },
+    {
+      'type':'andador',
+      'title':'Andador Articulado',
+      'img':'img/andador.svg',
+      'fallback':'img/andador.svg',
+      'specs': {
+        'Altura': 'Ajustável 78–96 cm',
+        'Peso': 'aprox. 2,7 kg',
+        'Material': 'Alumínio com travas',
+        'Pés': '4 apoios com ponteiras',
+        'Dobrável': 'Sim',
+      }
+    }
+  ] %}
+
+  {% for it in items %}
+  <div class="catalog-card">
+    <div class="catalog-thumb">
+      <img src="{{ url_for('static', filename=it.img) }}" alt="{{ it.title }}" />
+    </div>
+    <div class="catalog-body">
+      <h3>{{ it.title }}</h3>
+      <ul>
+        {% for k, v in it.specs.items() %}
+        <li><strong>{{ k }}:</strong> {{ v }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endfor %}
+</section>
+
+<style>
+.catalog-grid {
+  perspective: 800px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 8px;
+}
+.catalog-card {
+  transform-style: preserve-3d;
+  transition: transform .15s ease, box-shadow .2s ease;
+  background: var(--surface);
+  border: 1px solid #111; border-radius: 14px; padding: 12px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.25);
+  display: grid;
+  grid-template-rows: 220px auto;
+  overflow: hidden;
+}
+.catalog-thumb { display: grid; place-items: center; height: 220px; }
+.catalog-thumb img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 6px 14px rgba(0,0,0,.35)); }
+.catalog-body h3 { margin: 6px 0 8px; }
+.catalog-body ul { margin: 0; padding-left: 16px; line-height: 1.6; }
+</style>
+{% endblock %}
+

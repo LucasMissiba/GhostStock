@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2 class="page-title">{{ 'Editar' if item else 'Novo' }} item</h2>
+
+<form method="POST" enctype="multipart/form-data" class="form-grid">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+  {% set options = [
+    ('cama','Cama'),
+    ('cadeira_rodas','Cadeira de Rodas'),
+    ('cadeira_higienica','Cadeira Higiênica'),
+    ('muletas','Muletas'),
+    ('andador','Andador'),
+    ('colchao_pneumatico','Colchão Pneumático (CPNEU)')
+  ] %}
+  {% set initial_type = (item.item_type if item and item.item_type else 'cama') %}
+  <label>Nome
+    <select id="nameSelect" name="name" required>
+      {% for key,label in options %}
+        <option value="{{ label }}" data-type="{{ key }}" {% if item and (item.item_type==key or (item.name|lower)==(label|lower)) %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <input type="hidden" id="itemTypeInput" name="item_type" value="{{ initial_type }}" />
+  <label>Descrição
+    <textarea name="description">{{ item.description if item else '' }}</textarea>
+  </label>
+  {% if item %}
+  <label>Status
+    <select name="status" id="statusSelect">
+      {% set st = item.status %}
+      <option value="disponivel" {% if st=='disponivel' %}selected{% endif %}>Disponível</option>
+      <option value="locado" {% if st=='locado' %}selected{% endif %}>Locado</option>
+      <option value="vencido" {% if st=='vencido' %}selected{% endif %}>Vencido</option>
+      <option value="aguardando_manutencao" {% if st=='em_manutencao' %}selected{% endif %}>Aguardando manutenção</option>
+    </select>
+  </label>
+  {% endif %}
+  <label>Estoque de origem
+    {% set os = item.origin_stock if item else '' %}
+    <select name="origin_stock">
+      <option value="">Selecione</option>
+      <option value="AL" {% if os=='AL' %}selected{% endif %}>AL - Rio de Janeiro</option>
+      <option value="AS" {% if os=='AS' %}selected{% endif %}>AS - São Paulo</option>
+      <option value="AV" {% if os=='AV' %}selected{% endif %}>AV - Valinhos</option>
+      <option value="AB" {% if os=='AB' %}selected{% endif %}>AB - Belo Horizonte</option>
+    </select>
+  </label>
+  <label>Localização
+    <input name="location" value="{{ item.location if item else '' }}" />
+  </label>
+  {% if item and item.status != 'disponivel' %}
+  <label>Paciente (fictício)
+    <input name="patient_name" value="{{ item.patient_name if item else '' }}" />
+  </label>
+  {% endif %}
+  <label>Data de movimentação
+    <input type="date" name="movement_date" value="{{ item.movement_date.strftime('%Y-%m-%d') if item and item.movement_date else '' }}" />
+  </label>
+  {% if item %}
+  <label>Latitude
+    <input type="text" name="lat" value="{{ '%.6f'|format(item.lat) if item and item.lat else '' }}" />
+  </label>
+  <label>Longitude
+    <input type="text" name="lng" value="{{ '%.6f'|format(item.lng) if item and item.lng else '' }}" />
+  </label>
+  {% endif %}
+  <label>Data de entrada
+    <input type="date" name="entry_date" value="{{ item.entry_date.strftime('%Y-%m-%d') if item else '' }}" />
+  </label>
+  <label>Data de vencimento
+    <input type="date" name="expiry_date" value="{{ item.expiry_date.strftime('%Y-%m-%d') if item and item.expiry_date else '' }}" />
+  </label>
+  
+  <label>Foto
+    <input type="file" name="photo" accept="image/*" />
+  </label>
+  <div class="form-note">Imagens são comprimidas automaticamente para otimizar o desempenho.</div>
+  <div class="form-actions">
+    <button class="btn-primary" type="submit">Salvar</button>
+    <a class="btn-secondary" href="{{ url_for('items.list_items') }}">Cancelar</a>
+    {% if item %}
+      <button class="btn-secondary" type="button" id="finishMaintenanceBtn" {% if item.status!='em_manutencao' %}disabled{% endif %}>Concluir manutenção</button>
+    {% endif %}
+  </div>
+</form>
+<script>
+  // Mantém item_type sincronizado com a opção selecionada em "Nome"
+  (function(){
+    var sel = document.getElementById('nameSelect');
+    var hidden = document.getElementById('itemTypeInput');
+    if (sel && hidden) {
+      function syncType(){
+        var opt = sel.options[sel.selectedIndex];
+        hidden.value = opt ? (opt.getAttribute('data-type') || hidden.value) : hidden.value;
+      }
+      sel.addEventListener('change', syncType);
+      syncType();
+    }
+  })();
+</script>
+{% if item %}
+<script>
+  const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+  const select = document.getElementById('statusSelect');
+  const finishBtn = document.getElementById('finishMaintenanceBtn');
+  if (select) {
+    select.addEventListener('change', async () => {
+      const value = select.value;
+      if (!['aguardando_manutencao','locado','vencido'].includes(value)) return;
+      const res = await fetch('{{ url_for('items.update_status', item_id=item.id if item else 0) }}', {
+        method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf}, body: JSON.stringify({ status: value })
+      });
+      const data = await res.json();
+      if (data.status) {
+        if (data.status === 'em_manutencao') { if (finishBtn) finishBtn.disabled = false; }
+        else if (finishBtn) { finishBtn.disabled = true; }
+      }
+    });
+  }
+  if (finishBtn) {
+    finishBtn.addEventListener('click', async () => {
+      const res = await fetch('{{ url_for('items.update_status', item_id=item.id if item else 0) }}', {
+        method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf}, body: JSON.stringify({ status: 'disponivel' })
+      });
+      const data = await res.json();
+      if (data.status === 'disponivel') {
+        finishBtn.disabled = true;
+        alert('Manutenção concluída. Status: DISPONÍVEL');
+      }
+    });
+  }
+</script>
+{% endif %}
+{% endblock %}
+
+

@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block content %}
+<section>
+  <h2>Auditoria / Logs</h2>
+  <p class="muted">Últimas ações registradas.</p>
+  <div style="border:1px solid #111;border-radius:12px;padding:12px;max-height:460px;overflow:auto">
+    {% if entries %}
+      <ul>
+        {% for l in entries %}
+          <li style="font-family:monospace;white-space:pre-wrap">{{ l }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">Sem registros ainda.</p>
+    {% endif %}
+  </div>
+{% endblock %}
+
+

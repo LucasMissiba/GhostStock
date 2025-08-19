@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2 class="page-title">Sobre o sistema</h2>
+<p>GhostStock é um sistema minimalista de controle de estoque com QR Code, autenticação segura e dashboard em tema escuro.</p>
+<ul>
+  <li>Login seguro com bloqueio após tentativas</li>
+  <li>Controle de itens, histórico e alertas</li>
+  <li>QR Code com leitura via câmera</li>
+  <li>Exportação em Excel e PDF</li>
+  <li>Admin x Usuário com permissões distintas</li>
+  <li>Tema escuro e responsividade</li>
+  <li>Proteções: CSRF, HTTPS, consultas seguras</li>
+  </ul>
+<ghost-ia></ghost-ia>
+<script defer src="{{ url_for('static', filename='js/ghostia.js') }}?v=20250812-1"></script>
+{% endblock %}
+
+
+
+
+
+

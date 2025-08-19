@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block content %}
+<section>
+  <h2>Manutenção</h2>
+  <p class="muted">Simulação: camas com >120 dias desde a última manutenção são "Vencidas"; >90 dias, "Próximas".</p>
+  <div class="cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:8px">
+    <div class="card" style="border:1px solid #111;border-radius:12px;padding:12px">
+      <h3>Vencidas ({{ due|length }})</h3>
+      {% if due %}
+        <ul>
+          {% for i in due %}
+            <li><a class="btn-link" href="{{ url_for('items.view_item', item_id=i.id) }}">#{{ i.id }} - {{ i.name }}</a></li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">Nenhum item vencido.</p>
+      {% endif %}
+    </div>
+    <div class="card" style="border:1px solid #111;border-radius:12px;padding:12px">
+      <h3>Próximas ({{ soon|length }})</h3>
+      {% if soon %}
+        <ul>
+          {% for i in soon %}
+            <li><a class="btn-link" href="{{ url_for('items.view_item', item_id=i.id) }}">#{{ i.id }} - {{ i.name }}</a></li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">Nenhum item próximo de manutenção.</p>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2 class="page-title">Escanear QR Code</h2>
+<div id="reader" style="width: 100%"></div>
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script defer src="{{ url_for('static', filename='js/scan.js') }}"></script>
+<noscript>Ative o JavaScript para usar o leitor de QR.</noscript>
+{% endblock %}
+
+
+
+
+

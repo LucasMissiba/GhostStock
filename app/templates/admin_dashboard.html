@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2 class="page-title">Indicadores</h2>
+
+<div class="grid-cards">
+  <div class="card" id="card-total">
+    <div class="card-title">Total de itens</div>
+    <div class="card-value" id="stat-total">{{ initial.total if initial else 0 }}</div>
+  </div>
+  <div class="card" id="card-disponiveis">
+    <div class="card-title">Disponíveis</div>
+    <div class="card-value" id="stat-disponiveis">{{ initial.disponiveis if initial else 0 }}</div>
+  </div>
+  <div class="card" id="card-emuso">
+    <div class="card-title">Em uso</div>
+    <div class="card-value" id="stat-emuso">{{ initial.em_uso if initial else 0 }}</div>
+  </div>
+  <div class="card" id="card-maint-due">
+    <div class="card-title">Em manutenção</div>
+    <div class="card-value" id="stat-maintenance-due">{{ initial.maintenance.due if initial and initial.maintenance else 0 }}</div>
+  </div>
+  <div class="card" id="card-maint-soon">
+    <div class="card-title">Aguardando manutenção</div>
+    <div class="card-value" id="stat-maintenance-soon">{{ initial.maintenance.soon if initial and initial.maintenance else 0 }}</div>
+  </div>
+ </div>
+
+<div class="charts" style="padding:10px">
+  <canvas id="typeChart" height="320" style="margin-bottom:10px;height:320px"></canvas>
+  <canvas id="statusChart" height="80" style="margin-top:10px"></canvas>
+  <canvas id="stockStackedChart" height="90" style="margin-top:10px"></canvas>
+  <canvas id="moveChart" height="80" style="margin-top:10px"></canvas>
+</div>
+
+<div id="dash-initial" data-json='{{ initial|tojson }}' style="display:none"></div>
+
+<div class="exports">
+  <a class="btn-secondary" href="{{ url_for('dashboard.export_excel') }}">Exportar Excel</a>
+  <a class="btn-secondary" href="{{ url_for('dashboard.export_pdf') }}">Exportar PDF</a>
+</div>
+
+
+{% endblock %}
+
+

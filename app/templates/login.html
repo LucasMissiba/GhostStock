@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="login-section">
+  <div class="login-card">
+    <h1>Entrar</h1>
+    <form method="POST" class="login-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <label>E-mail</label>
+      <input name="email" type="email" placeholder="voce@empresa.com" required />
+      <label>Senha</label>
+      <input name="password" type="password" placeholder="••••••••" required />
+      <button type="submit" class="btn-primary">Acessar</button>
+    </form>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+

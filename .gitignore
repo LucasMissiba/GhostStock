@@ -1,0 +1,11 @@
+﻿.venv/
+instance/
+logs/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+app/static/qrcodes/
+app/static/uploads/
+.env

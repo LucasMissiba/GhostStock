@@ -5,11 +5,13 @@ main_bp = Blueprint("main", __name__)
 
 
 @main_bp.route("/")
+@login_required
 def index():
                                           
     return render_template("home.html")
 
 @main_bp.route("/home")
+@login_required
 def home():
     return render_template("home.html")
 

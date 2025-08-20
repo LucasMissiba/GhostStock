@@ -23,3 +23,4 @@ def send_email(subject: str, recipients: list[str], body: str) -> None:
 
 
 
+

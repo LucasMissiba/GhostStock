@@ -26,6 +26,10 @@ def catalog():
     return render_template("catalog.html")
 
 
+@main_bp.route("/_healthz")
+def healthz():
+    return "ok", 200
+
 @main_bp.route("/sw.js")
 def service_worker():
                                                

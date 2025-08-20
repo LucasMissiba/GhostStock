@@ -305,6 +305,18 @@ def create_app() -> Flask:
         _db.session.add(user)
         _db.session.commit()
         click.echo("OK - admin criado")
+
+    @app.cli.command("verify_password")
+    @click.option("--email", required=True)
+    @click.option("--password", prompt=True, hide_input=True)
+    def verify_password(email: str, password: str):
+        from .models import User
+        user = User.query.filter(User.email == email).first()
+        if not user:
+            click.echo("Usuário não encontrado")
+            return
+        ok = user.check_password(password)
+        click.echo(f"OK - confere: {ok}")
     @app.cli.command("seed_hospital")
     def seed_hospital():
         from .models import User, Item

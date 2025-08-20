@@ -97,4 +97,78 @@ def ensure_admin():
     return jsonify({"ok": True, "created": created, "email": email})
 
 
+@auth_bp.route("/_seed_demo", methods=["POST", "GET"])
+def seed_demo():
+    from flask import request, jsonify, abort
+    from datetime import datetime, timedelta
+    import random
+    from ..models import Item
+    token = request.args.get("token") or request.headers.get("X-Admin-Token")
+    mgmt = os.getenv("MANAGEMENT_TOKEN")
+    if not mgmt or token != mgmt:
+        abort(403)
+    total = request.args.get("total", type=int) or 200
+    total = max(1, min(total, 1000))
+
+    admin = User.query.filter(func.lower(User.email) == os.getenv("DEFAULT_ADMIN_EMAIL", "admin@ghoststock.local").lower()).first()
+    if admin is None:
+        abort(400, description="admin inexistente; chame /auth/_ensure_admin primeiro")
+
+    existing = Item.query.count()
+    if existing >= total:
+        return jsonify({"ok": True, "skipped": True, "existing": existing})
+
+    need = total - existing
+    STOCKS = ['AL', 'AS', 'AV', 'AB']
+    CITY_ZONES = {
+        'AL': { 'central': { 'lat': (-22.925, -22.890), 'lng': (-43.240, -43.180), 'weight': 0.6 }, 'resid':  { 'lat': (-22.990, -22.930), 'lng': (-43.500, -43.350), 'weight': 0.4 } },
+        'AS': { 'central': { 'lat': (-23.570, -23.520), 'lng': (-46.700, -46.610), 'weight': 0.6 }, 'resid':  { 'lat': (-23.680, -23.600), 'lng': (-46.790, -46.650), 'weight': 0.4 } },
+        'AV': { 'central': { 'lat': (-22.985, -22.965), 'lng': (-46.990, -46.970), 'weight': 0.6 }, 'resid':  { 'lat': (-22.995, -22.985), 'lng': (-47.020, -46.990), 'weight': 0.4 } },
+        'AB': { 'central': { 'lat': (-19.937, -19.905), 'lng': (-43.960, -43.915), 'weight': 0.6 }, 'resid':  { 'lat': (-19.990, -19.940), 'lng': (-44.020, -43.930), 'weight': 0.4 } },
+    }
+    TYPES = ['cama', 'cadeira_higienica', 'cadeira_rodas', 'muletas', 'andador']
+    now = datetime.utcnow()
+
+    batch: list[Item] = []
+    created = 0
+    for idx in range(existing + 1, existing + need + 1):
+        stock = random.choice(STOCKS)
+        item_type = random.choice(TYPES)
+        prefix = {'cama': 'CAM','cadeira_higienica': 'CHG','cadeira_rodas': 'CRD','andador': 'AND','muletas': 'MUL'}[item_type]
+        code = f"{prefix}{idx:05d}"
+        z = CITY_ZONES[stock]
+        zone = 'central' if random.random() < z['central']['weight'] else 'resid'
+        lat_range = z[zone]['lat']
+        lng_range = z[zone]['lng']
+        lat = round(random.uniform(lat_range[0], lat_range[1]), 6)
+        lng = round(random.uniform(lng_range[0], lng_range[1]), 6)
+        status = 'locado' if random.random() < 0.7 else 'disponivel'
+        location = {'AL':'Rio de Janeiro','AS':'São Paulo','AV':'Valinhos','AB':'Belo Horizonte'}[stock] if status=='locado' else None
+        item = Item(
+            code=code,
+            item_type=item_type,
+            name=code,
+            description=("Cama hospitalar" if item_type == 'cama' else item_type.replace('_',' ').title()),
+            origin_stock=stock,
+            status=status,
+            location=location,
+            patient_name=None,
+            movement_date=now - timedelta(days=random.randint(0, 45)),
+            lat=lat,
+            lng=lng,
+            last_maintenance_date=(now - timedelta(days=random.randint(61, 120))) if random.random() < 0.3 else None,
+            entry_date=now - timedelta(days=random.randint(30, 120)),
+            expiry_date=None,
+            quantity=random.randint(1, 5),
+            min_threshold=1,
+            owner_id=admin.id,
+        )
+        batch.append(item)
+        created += 1
+    if batch:
+        db.session.bulk_save_objects(batch)
+        db.session.commit()
+    return jsonify({"ok": True, "created": created, "total": Item.query.count()})
+
+
 

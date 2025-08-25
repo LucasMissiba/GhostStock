@@ -99,6 +99,20 @@ def create_app() -> Flask:
                                                                                             
     app.jinja_env.globals["has_endpoint"] = lambda endpoint_name: endpoint_name in app.view_functions
 
+    @app.after_request
+    def _no_store_cache(resp):  # type: ignore[override]
+        try:
+            from flask import request as _rq
+            p = _rq.path or ""
+            if not (p.startswith("/static/") or p in ("/sw.js", "/favicon.ico")):
+                resp.headers["Cache-Control"] = "no-store, max-age=0"
+                resp.headers["Pragma"] = "no-cache"
+                resp.headers["CDN-Cache-Control"] = "no-store"
+                resp.headers["Vercel-CDN-Cache-Control"] = "no-store"
+        except Exception:
+            pass
+        return resp
+
                 
     from .routes.auth import auth_bp
     from .routes.items import items_bp

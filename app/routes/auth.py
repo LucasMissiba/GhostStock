@@ -131,12 +131,7 @@ def seed_demo():
     if admin is None:
         abort(400, description="admin inexistente; chame /auth/_ensure_admin primeiro")
 
-    existing = Item.query.count()
-    if existing >= total:
-        return jsonify({"ok": True, "skipped": True, "existing": existing, "remaining": 0})
-
-    need = total - existing
-    to_create = min(need, max_per_call)
+    # tipos válidos e leitura do filtro opcional de tipo
     STOCKS = ['AL', 'AS', 'AV', 'AB']
     CITY_ZONES = {
         'AL': { 'central': { 'lat': (-22.925, -22.890), 'lng': (-43.240, -43.180), 'weight': 0.6 }, 'resid':  { 'lat': (-22.990, -22.930), 'lng': (-43.500, -43.350), 'weight': 0.4 } },
@@ -144,17 +139,41 @@ def seed_demo():
         'AV': { 'central': { 'lat': (-22.985, -22.965), 'lng': (-46.990, -46.970), 'weight': 0.6 }, 'resid':  { 'lat': (-22.995, -22.985), 'lng': (-47.020, -46.990), 'weight': 0.4 } },
         'AB': { 'central': { 'lat': (-19.937, -19.905), 'lng': (-43.960, -43.915), 'weight': 0.6 }, 'resid':  { 'lat': (-19.990, -19.940), 'lng': (-44.020, -43.930), 'weight': 0.4 } },
     }
-    TYPES = ['cama', 'cadeira_higienica', 'cadeira_rodas', 'muletas', 'andador']
+    TYPES = ['cama', 'cadeira_higienica', 'cadeira_rodas', 'muletas', 'andador', 'colchao_pneumatico']
     now = datetime.utcnow()
 
     batch: list[Item] = []
     created = 0
+    # Lê o filtro de tipo antes de calcular existentes/necessários
+    only_type = (request.args.get("only_type") or "").strip() or None
+    if only_type and only_type not in TYPES:
+        abort(400, description=f"only_type inválido: {only_type}")
+
+    # Quando only_type é informado, considerar apenas os existentes daquele tipo
+    if only_type:
+        existing = Item.query.filter(Item.item_type == only_type).count()
+    else:
+        existing = Item.query.count()
+
+    if existing >= total:
+        return jsonify({"ok": True, "skipped": True, "existing": existing, "remaining": 0})
+
+    need = total - existing
+    to_create = min(need, max_per_call)
     start_idx = existing + 1
     end_idx = existing + to_create
+
     for idx in range(start_idx, end_idx + 1):
         stock = random.choice(STOCKS)
-        item_type = random.choice(TYPES)
-        prefix = {'cama': 'CAM','cadeira_higienica': 'CHG','cadeira_rodas': 'CRD','andador': 'AND','muletas': 'MUL'}[item_type]
+        item_type = only_type or random.choice(TYPES)
+        prefix = {
+            'cama': 'CAM',
+            'cadeira_higienica': 'CHG',
+            'cadeira_rodas': 'CRD',
+            'andador': 'AND',
+            'muletas': 'MUL',
+            'colchao_pneumatico': 'CPNEU',
+        }[item_type]
         code = f"{prefix}{idx:05d}"
         z = CITY_ZONES[stock]
         zone = 'central' if random.random() < z['central']['weight'] else 'resid'

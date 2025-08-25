@@ -94,7 +94,13 @@ def ensure_admin():
             user.failed_attempts = 0
             user.locked_until = None
             db.session.commit()
-    return jsonify({"ok": True, "created": created, "email": email})
+    resp = jsonify({"ok": True, "created": created, "email": email})
+    # evitar cache no CDN/browser
+    resp.headers["Cache-Control"] = "no-store, max-age=0"
+    resp.headers["CDN-Cache-Control"] = "no-store"
+    resp.headers["Vercel-CDN-Cache-Control"] = "no-store"
+    resp.headers["Pragma"] = "no-cache"
+    return resp
 
 
 @auth_bp.route("/_seed_demo", methods=["POST", "GET"])
@@ -107,8 +113,19 @@ def seed_demo():
     mgmt = os.getenv("MANAGEMENT_TOKEN")
     if not mgmt or token != mgmt:
         abort(403)
+    # alvo total desejado
     total = request.args.get("total", type=int) or 200
-    total = max(1, min(total, 1000))
+    total = max(1, total)
+    # limite de criação por chamada para evitar timeout (pode ser ajustado por query cap=)
+    max_per_call = request.args.get("cap", type=int)
+    if not max_per_call:
+        max_per_call = int(os.getenv("SEED_MAX_PER_CALL", "1200"))
+    if max_per_call < 50:
+        max_per_call = 50
+    # tamanho de cada batch de commit
+    batch_size = request.args.get("batch", type=int) or int(os.getenv("SEED_BATCH_SIZE", "300"))
+    if batch_size < 50:
+        batch_size = 50
 
     admin = User.query.filter(func.lower(User.email) == os.getenv("DEFAULT_ADMIN_EMAIL", "admin@ghoststock.local").lower()).first()
     if admin is None:
@@ -116,9 +133,10 @@ def seed_demo():
 
     existing = Item.query.count()
     if existing >= total:
-        return jsonify({"ok": True, "skipped": True, "existing": existing})
+        return jsonify({"ok": True, "skipped": True, "existing": existing, "remaining": 0})
 
     need = total - existing
+    to_create = min(need, max_per_call)
     STOCKS = ['AL', 'AS', 'AV', 'AB']
     CITY_ZONES = {
         'AL': { 'central': { 'lat': (-22.925, -22.890), 'lng': (-43.240, -43.180), 'weight': 0.6 }, 'resid':  { 'lat': (-22.990, -22.930), 'lng': (-43.500, -43.350), 'weight': 0.4 } },
@@ -131,7 +149,9 @@ def seed_demo():
 
     batch: list[Item] = []
     created = 0
-    for idx in range(existing + 1, existing + need + 1):
+    start_idx = existing + 1
+    end_idx = existing + to_create
+    for idx in range(start_idx, end_idx + 1):
         stock = random.choice(STOCKS)
         item_type = random.choice(TYPES)
         prefix = {'cama': 'CAM','cadeira_higienica': 'CHG','cadeira_rodas': 'CRD','andador': 'AND','muletas': 'MUL'}[item_type]
@@ -144,7 +164,7 @@ def seed_demo():
         lng = round(random.uniform(lng_range[0], lng_range[1]), 6)
         status = 'locado' if random.random() < 0.7 else 'disponivel'
         location = {'AL':'Rio de Janeiro','AS':'São Paulo','AV':'Valinhos','AB':'Belo Horizonte'}[stock] if status=='locado' else None
-        item = Item(
+        batch.append(Item(
             code=code,
             item_type=item_type,
             name=code,
@@ -162,13 +182,33 @@ def seed_demo():
             quantity=random.randint(1, 5),
             min_threshold=1,
             owner_id=admin.id,
-        )
-        batch.append(item)
-        created += 1
+        ))
+        if len(batch) >= batch_size:
+            db.session.bulk_save_objects(batch)
+            db.session.commit()
+            created += len(batch)
+            batch.clear()
     if batch:
         db.session.bulk_save_objects(batch)
         db.session.commit()
-    return jsonify({"ok": True, "created": created, "total": Item.query.count()})
+        created += len(batch)
+
+    new_total = Item.query.count()
+    remaining = max(0, total - new_total)
+    resp = jsonify({
+        "ok": True,
+        "created": created,
+        "existing_after": new_total,
+        "target_total": total,
+        "remaining": remaining,
+        "cap_used": max_per_call,
+        "batch_size": batch_size
+    })
+    resp.headers["Cache-Control"] = "no-store, max-age=0"
+    resp.headers["CDN-Cache-Control"] = "no-store"
+    resp.headers["Vercel-CDN-Cache-Control"] = "no-store"
+    resp.headers["Pragma"] = "no-cache"
+    return resp
 
 
 
